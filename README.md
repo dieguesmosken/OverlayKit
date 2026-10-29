@@ -1,4 +1,4 @@
-# 🧩 OverlayKit
+# 🧩 OverlayKit - BETA 0.1
 
 Monte o **overlay da sua live** sem programar: quadros, textos, relógio, barra de meta, chat e muito mais, tudo arrastando e soltando. No final você copia **um link** e cola numa fonte de *Navegador* do OBS.
 
