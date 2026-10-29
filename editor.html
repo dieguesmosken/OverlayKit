@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>OverlayKit - Editor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{--ac:#7B2CF2;--ac2:#A970FF;--bg:#0b0816;--pn:#14102a;--pn2:#1b1538;--bd:#2c2252;--tx:#f1eaff;--su:#a99bd0}
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{background:var(--bg);color:var(--tx);font:13px/1.35 "Segoe UI",system-ui,sans-serif;display:grid;grid-template-rows:auto 1fr;overflow:hidden}
+  button,select,input,textarea{font:inherit;color:var(--tx)}
+  header{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 12px;background:var(--pn);border-bottom:1px solid var(--bd)}
+  header h1{margin:0;font-size:16px;white-space:nowrap}
+  header h1 b{color:var(--ac2)}
+  .grp{display:flex;gap:6px;align-items:center}
+  .grp>label{color:var(--su);font-size:12px}
+  select,input[type=text],input[type=number],textarea{background:#0e0a20;border:1px solid var(--bd);border-radius:8px;padding:5px 8px;min-width:0}
+  input[type=number]{width:72px}
+  textarea{width:100%;resize:vertical}
+  button{background:var(--pn2);border:1px solid var(--bd);border-radius:8px;padding:5px 10px;cursor:pointer}
+  button:hover{border-color:var(--ac2)}
+  button.pri{background:linear-gradient(135deg,var(--ac),var(--ac2));border:0;font-weight:700;color:#fff}
+  button.sm{padding:2px 7px;font-size:12px}
+  button.on{background:var(--ac);border-color:var(--ac2)}
+  main{display:grid;grid-template-columns:230px minmax(0,1fr) 320px;min-height:0}
+  @media(max-width:1100px){main{grid-template-columns:200px minmax(0,1fr) 280px}}
+  aside{background:var(--pn);overflow:auto;min-height:0}
+  #left{border-right:1px solid var(--bd);padding:8px}
+  #right{border-left:1px solid var(--bd)}
+  h2{margin:6px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ac2)}
+  .add{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px}
+  .lista{display:flex;flex-direction:column;gap:3px}
+  .it{display:flex;align-items:center;gap:4px;padding:4px 6px;border:1px solid transparent;border-radius:8px;cursor:pointer;background:#100c24}
+  .it.sel{border-color:var(--ac2);background:#241a4a}
+  .it .n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .it button{padding:0 5px;background:none;border:0;opacity:.7}
+  .it button:hover{opacity:1}
+  #centro{display:flex;flex-direction:column;min-height:0;min-width:0}
+  #barra{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:6px 10px;border-bottom:1px solid var(--bd);background:#100c24}
+  #palco{flex:1;overflow:auto;padding:16px;min-height:0;position:relative}
+  #palco.xadrez{background:repeating-conic-gradient(#2b2b36 0 25%,#23232d 0 50%) 0 0/24px 24px}
+  #palco.escuro{background:#05030a}
+  #palco.claro{background:#d8d8e0}
+  #palco.jogo{background:linear-gradient(135deg,#1c2b3a,#3a2a52 60%,#10202c)}
+  #escala{position:relative;margin:0 auto;box-shadow:0 0 0 1px #ffffff22}
+  #root{position:absolute;left:0;top:0}
+  #sel{position:absolute;border:2px solid #4ff;pointer-events:none;display:none;z-index:10}
+  #sel i{position:absolute;width:11px;height:11px;background:#4ff;border:1px solid #022;pointer-events:auto;border-radius:3px}
+  #guias{position:absolute;inset:0;pointer-events:none;z-index:9}
+  #guias div{position:absolute;background:#ff3d9a88}
+  .ok-el{cursor:move}
+  #inspetor{padding:10px}
+  .tabs{display:flex;border-bottom:1px solid var(--bd)}
+  .tabs button{flex:1;border:0;border-radius:0;background:none;padding:8px}
+  .tabs button.on{background:var(--pn2);color:#fff;border-bottom:2px solid var(--ac2)}
+  .f{display:grid;grid-template-columns:105px 1fr;gap:6px;align-items:center;margin:6px 0}
+  .f>span{color:var(--su);font-size:12px}
+  .f .c{display:flex;gap:5px;align-items:center}
+  .f input[type=range]{width:100%;accent-color:var(--ac2)}
+  .f input[type=color]{width:34px;height:26px;padding:0;border:1px solid var(--bd);border-radius:6px;background:none}
+  .f select{width:100%}
+  .f .v{min-width:36px;text-align:right;color:var(--ac2)}
+  .f4{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin:6px 0}
+  .f4 label{display:flex;flex-direction:column;color:var(--su);font-size:11px}
+  .f4 input{width:100%}
+  .sep{height:1px;background:var(--bd);margin:10px 0}
+  .dica{color:var(--su);font-size:12px}
+  #export{padding:8px 10px;border-top:1px solid var(--bd);background:#100c24;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+  #link{height:44px;font:11px/1.3 Consolas,monospace;word-break:break-all}
+  dialog{background:var(--pn);color:var(--tx);border:1px solid var(--ac2);border-radius:14px;max-width:620px;width:92%}
+  dialog::backdrop{background:#000a}
+  .vazio{color:var(--su);padding:20px;text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <h1>🧩 Overlay<b>Kit</b> <small id="sub" style="color:var(--su);font-weight:400"></small></h1>
+  <div class="grp"><label data-t="preset">Modelo</label><select id="preset"></select></div>
+  <div class="grp"><label data-t="tema">Tema</label><select id="tema"></select></div>
+  <div class="grp"><label data-t="tela">Tela</label><select id="tela"></select></div>
+  <div class="grp" style="margin-left:auto">
+    <button id="undo" title="Ctrl+Z">↶</button><button id="redo" title="Ctrl+Y">↷</button>
+    <button id="imp" data-t="importar">Importar</button>
+    <select id="lang"><option value="pt">Português</option><option value="en">English</option></select>
+  </div>
+</header>
+
+<main>
+  <aside id="left">
+    <h2 data-t="adicionar">Adicionar</h2>
+    <div class="add" id="add"></div>
+    <h2 data-t="camadas">Camadas</h2>
+    <div class="lista" id="lista"></div>
+    <p class="dica" data-t="dicaLista" style="margin-top:10px"></p>
+  </aside>
+
+  <section id="centro">
+    <div id="barra">
+      <div class="grp"><label data-t="zoom">Zoom</label><input type="range" id="zoom" min="10" max="150" value="50" style="width:110px"><span id="zv"></span><button id="fit" data-t="ajustar">Ajustar</button></div>
+      <div class="grp"><label data-t="fundo">Fundo</label><select id="pbg"><option value="xadrez">Xadrez</option><option value="escuro">Escuro</option><option value="claro">Claro</option><option value="jogo">Jogo (exemplo)</option></select></div>
+      <div class="grp"><label data-t="grade">Grade</label><select id="snap"><option value="0">Off</option><option value="5">5 px</option><option value="10" selected>10 px</option><option value="20">20 px</option><option value="40">40 px</option></select></div>
+      <label class="grp"><input type="checkbox" id="guiasck" checked><span data-t="guias">Guias</span></label>
+      <label class="grp"><input type="checkbox" id="embck"><span data-t="embeds">Carregar chat/widgets na prévia</span></label>
+    </div>
+    <div id="palco" class="xadrez"><div id="escala"><div id="root"></div><div id="guias"></div><div id="sel"></div></div></div>
+    <div id="export">
+      <textarea id="link" readonly></textarea>
+      <div class="grp" style="flex-wrap:wrap;justify-content:flex-end">
+        <button class="pri" id="copiar" data-t="copiar">📋 Copiar link</button>
+        <button id="abrir" data-t="abrir">Abrir</button>
+        <button id="cjson" data-t="cjson">Copiar JSON</button>
+        <button id="bjson" data-t="bjson">Baixar JSON</button>
+      </div>
+    </div>
+  </section>
+
+  <aside id="right">
+    <div class="tabs"><button id="tabE" class="on" data-t="elemento">Elemento</button><button id="tabG" data-t="geral">Geral</button></div>
+    <div id="inspetor"></div>
+  </aside>
+</main>
+
+<dialog id="dlg">
+  <h2 data-t="importar">Importar</h2>
+  <p class="dica" data-t="impDica"></p>
+  <textarea id="impTxt" rows="8"></textarea>
+  <div class="grp" style="margin-top:10px;justify-content:flex-end">
+    <input type="file" id="impFile" accept=".json,application/json">
+    <button id="impCancel" data-t="cancelar">Cancelar</button>
+    <button class="pri" id="impOk" data-t="aplicar">Aplicar</button>
+  </div>
+</dialog>
+
+<script src="overlay.js"></script>
+<script src="presets.js"></script>
+<script>
+(() => {
+'use strict';
+const K = OverlayKit, $ = id => document.getElementById(id);
+
+/* ---------- idioma ---------- */
+const UI = {
+  pt: { preset:'Modelo', tema:'Tema', tela:'Tela', importar:'Importar', adicionar:'Adicionar', camadas:'Camadas', zoom:'Zoom', ajustar:'Ajustar', fundo:'Fundo da prévia', grade:'Grade', guias:'Guias', embeds:'Carregar chat/widgets na prévia',
+    copiar:'📋 Copiar link', abrir:'Abrir', cjson:'Copiar JSON', bjson:'Baixar JSON', elemento:'Elemento', geral:'Geral', cancelar:'Cancelar', aplicar:'Aplicar',
+    dicaLista:'Dica: arraste os elementos no quadro, use as alças para redimensionar e as setas do teclado para ajustar (Shift = 10px). Delete apaga, Ctrl+D duplica.',
+    impDica:'Cole um link do OverlayKit ou o JSON de uma configuração (ou escolha um arquivo .json).', nada:'Selecione um elemento para editar.', semEl:'Nenhum elemento ainda. Use "Adicionar".',
+    posicao:'Posição e tamanho', aparencia:'Aparência', conteudo:'Conteúdo', copiado:'Copiado!', invalido:'Não consegui ler essa configuração.', tamLink:'caracteres no link',
+    obs:'No OBS: Fonte → Navegador, desmarque "Arquivo local" (ou marque, se estiver no PC) e use largura × altura =', dup:'Duplicar', del:'Excluir', canvas:'Tela (canvas)', tamanho:'Tamanho', cores:'Cores do tema', tipografia:'Fonte', bgT:'Fundo do overlay',
+    resetar:'Restaurar modelo', temaPers:'Personalizado', chatTw:'Chat da Twitch (popout)', chatBC:'TeuzinBetterChat', canal:'Canal', aplicarCanal:'Preencher URL', tipos:{frame:'Quadro',text:'Texto',image:'Imagem',lower:'Barra com avatar',clock:'Relógio',embed:'Chat / widget',ticker:'Frases em rotação',bar:'Barra de meta',countdown:'Contagem regressiva'} },
+  en: { preset:'Template', tema:'Theme', tela:'Canvas', importar:'Import', adicionar:'Add', camadas:'Layers', zoom:'Zoom', ajustar:'Fit', fundo:'Preview bg', grade:'Grid', guias:'Guides', embeds:'Load chat/widgets in preview',
+    copiar:'📋 Copy link', abrir:'Open', cjson:'Copy JSON', bjson:'Download JSON', elemento:'Element', geral:'General', cancelar:'Cancel', aplicar:'Apply',
+    dicaLista:'Tip: drag elements on the canvas, use the handles to resize and the arrow keys to nudge (Shift = 10px). Delete removes, Ctrl+D duplicates.',
+    impDica:'Paste an OverlayKit link or a configuration JSON (or choose a .json file).', nada:'Select an element to edit.', semEl:'No elements yet. Use "Add".',
+    posicao:'Position & size', aparencia:'Appearance', conteudo:'Content', copiado:'Copied!', invalido:'Could not read that configuration.', tamLink:'characters in the link',
+    obs:'In OBS: Source → Browser, untick "Local file" (or tick it if running locally) and set width × height =', dup:'Duplicate', del:'Delete', canvas:'Canvas', tamanho:'Size', cores:'Theme colors', tipografia:'Font', bgT:'Overlay background',
+    resetar:'Reset template', temaPers:'Custom', chatTw:'Twitch chat (popout)', chatBC:'TeuzinBetterChat', canal:'Channel', aplicarCanal:'Fill URL', tipos:{frame:'Frame',text:'Text',image:'Image',lower:'Lower third',clock:'Clock',embed:'Chat / widget',ticker:'Rotating phrases',bar:'Goal bar',countdown:'Countdown'} }
+};
+let lang = 'pt'; try { lang = localStorage.getItem('overlaykit-lang') || (navigator.language || 'pt').slice(0, 2); } catch (e) {}
+if (!UI[lang]) lang = 'pt';
+const t = k => UI[lang][k] != null ? UI[lang][k] : k;
+const L = (pt, en) => lang === 'en' ? en : pt;
+
+/* ---------- esquema dos elementos ---------- */
+const FONT_OPTS = [['', ['Do tema', 'Theme']]].concat(Object.keys(K.FONTS).map(k => [k, K.FONTS[k].label]));
+const TZ = [['', ['Do computador', 'This computer']], ['America/Sao_Paulo', 'Brasília'], ['America/Manaus', 'Manaus'], ['America/New_York', 'New York'], ['America/Los_Angeles', 'Los Angeles'], ['Europe/Lisbon', 'Lisboa'], ['Europe/London', 'London'], ['Europe/Madrid', 'Madrid'], ['Asia/Tokyo', 'Tokyo'], ['UTC', 'UTC']];
+const ALIGN = [['left', ['Esquerda', 'Left']], ['center', ['Centro', 'Center']], ['right', ['Direita', 'Right']]];
+const ANIMS = [['none', ['Nenhuma', 'None']], ['pulse', ['Brilho pulsando', 'Glow pulse']], ['float', ['Flutuando', 'Floating']], ['breathe', ['Respirando', 'Breathing']], ['in', ['Entrada suave', 'Fade in']]];
+
+const F = {
+  bw: ['n', ['Borda', 'Border'], 0, 40, 1], r: ['n', ['Arredond.', 'Radius'], 0, 400, 1], bc: ['c', ['Cor da borda', 'Border color']], glow: ['n', ['Brilho', 'Glow'], 0, 120, 1],
+  fill: ['c0', ['Preenchimento', 'Fill']], fa: ['n', ['Opac. fundo %', 'Fill opacity %'], 0, 100, 1],
+  tag: ['t', ['Etiqueta', 'Tag']], tfs: ['n', ['Tam. etiqueta', 'Tag size'], 10, 80, 1], tc: ['c', ['Cor etiqueta', 'Tag color']],
+  txt: ['ta', ['Texto', 'Text'], 4], fs: ['n', ['Tamanho', 'Size'], 8, 400, 1], fw: ['s', ['Peso', 'Weight'], [[400, 'Normal'], [600, 'Semi'], [700, 'Bold'], [800, 'Extra']]],
+  c: ['c', ['Cor', 'Color']], al: ['s', ['Alinhar', 'Align'], ALIGN], va: ['s', ['Vertical', 'Vertical'], [['top', ['Topo', 'Top']], ['middle', ['Meio', 'Middle']], ['bottom', ['Base', 'Bottom']]]],
+  up: ['k', ['MAIÚSCULAS', 'UPPERCASE']], it: ['k', ['Itálico', 'Italic']], sh: ['k', ['Sombra/brilho', 'Glow shadow']], shc: ['c', ['Cor sombra', 'Shadow color']],
+  lh: ['n', ['Entrelinha', 'Line height'], 0.8, 3, 0.05], ls: ['n', ['Espaç. letras', 'Letter spacing'], -5, 40, 0.5], fam: ['s', ['Fonte', 'Font'], FONT_OPTS],
+  src: ['t', ['URL da imagem', 'Image URL']], fit: ['s', ['Ajuste', 'Fit'], [['cover', ['Preencher', 'Cover']], ['contain', ['Conter', 'Contain']]]],
+  t1: ['t', ['Título', 'Title']], t2: ['t', ['Subtítulo', 'Subtitle']], t3: ['t', ['Texto à direita', 'Right text']], av: ['t', ['URL do avatar', 'Avatar URL']], avsq: ['k', ['Avatar quadrado', 'Square avatar']], noav: ['k', ['Ocultar avatar', 'Hide avatar']],
+  avc: ['c', ['Borda avatar', 'Avatar ring']], c1: ['c', ['Cor título', 'Title color']], c2: ['c', ['Cor subtítulo', 'Subtitle color']], c3: ['c', ['Cor dir.', 'Right color']], fsp: ['n', ['Escala texto %', 'Text scale %'], 50, 200, 5],
+  tz: ['s', ['Fuso', 'Timezone'], TZ], sec: ['k', ['Mostrar segundos', 'Show seconds']], lab: ['t', ['Legenda', 'Caption']],
+  url: ['t', ['URL', 'URL']], items: ['ta', ['Frases (1 por linha)', 'Phrases (1 per line)'], 5], secs: ['n', ['Troca a cada (s)', 'Change every (s)'], 2, 120, 1],
+  val: ['n', ['Valor atual', 'Current value'], 0, 1e9, 1], max: ['n', ['Meta', 'Goal'], 1, 1e9, 1], pct: ['k', ['Mostrar %', 'Show %']], cur: ['t', ['Prefixo (R$…)', 'Prefix ($…)']],
+  min: ['n', ['Minutos', 'Minutes'], 0, 600, 1], at: ['t', ['Ou até as (HH:MM)', 'Or until (HH:MM)']], done: ['t', ['Texto no fim', 'Text at the end']], hours: ['k', ['Mostrar horas', 'Show hours']],
+  fc: ['c', ['Cor barra', 'Bar color']], fc2: ['c', ['Cor barra 2', 'Bar color 2']]
+};
+const AP = ['Aparência', 'Appearance'], CT = ['Conteúdo', 'Content'];
+const SCHEMA = {
+  frame: { name: 'tag', g: [[AP, ['bw', 'r', 'bc', 'glow', 'fill', 'fa']], [['Etiqueta', 'Tag'], ['tag', 'tfs', 'tc']]] },
+  text: { name: 'txt', g: [[CT, ['txt', 'fam', 'fs', 'fw', 'c', 'al', 'va']], [['Estilo', 'Style'], ['up', 'it', 'sh', 'shc', 'lh', 'ls']]] },
+  image: { name: 'src', g: [[['Imagem', 'Image'], ['src', 'fit', 'r', 'bw', 'bc', 'glow']]] },
+  lower: { name: 't1', g: [[CT, ['t1', 't2', 't3', 'av', 'noav', 'avsq', 'fsp']], [AP, ['bw', 'r', 'bc', 'glow', 'fill', 'fa', 'c1', 'c2', 'c3', 'avc']]] },
+  clock: { name: 'lab', g: [[['Relógio', 'Clock'], ['tz', 'sec', 'lab', 'fam', 'fs', 'c', 'al', 'sh']]] },
+  embed: { name: 'url', g: [[['Chat / widget', 'Chat / widget'], ['url', 'r', 'bw', 'bc', 'fill', 'fa']]] },
+  ticker: { name: 'items', g: [[CT, ['items', 'secs', 'fs', 'fw', 'c', 'al']], [AP, ['fill', 'fa', 'r', 'bw', 'bc']]] },
+  countdown: { name: 'lab', g: [[['Contagem regressiva', 'Countdown'], ['min', 'at', 'done', 'hours', 'lab', 'fam', 'fs', 'c', 'al', 'sh']]] },
+  bar: { name: 'lab', g: [[['Meta', 'Goal'], ['lab', 'val', 'max', 'pct', 'cur', 'fs']], [AP, ['bw', 'r', 'bc', 'glow', 'fill', 'fa', 'fc', 'fc2', 'c']]] }
+};
+const ICON = { frame: '▭', text: 'T', image: '🖼', lower: '▬', clock: '🕒', embed: '💬', ticker: '🔁', bar: '🎯', countdown: '⏳' };
+const DEF = {
+  frame: { w: 600, h: 340, bw: 6, r: 28, bc: 'p', glow: 0, tag: '' },
+  text: { w: 600, h: 100, txt: 'Seu texto', fs: 48, fw: 700, c: 'tx', al: 'left' },
+  image: { w: 300, h: 300, src: '', fit: 'cover', r: 28, bw: 0, bc: 'p' },
+  lower: { w: 900, h: 160, bw: 4, r: 30, bc: 'a', fill: 'pn', fa: 95, t1: 'seucanal', t2: 'twitch.tv/seucanal', t3: '' },
+  clock: { w: 420, h: 120, fs: 90, al: 'center', sh: true, lab: '', tz: '' },
+  embed: { w: 560, h: 700, r: 24, url: '', bw: 0, bc: 'p' },
+  ticker: { w: 900, h: 70, fs: 32, c: 'a', al: 'center', sec: 8, items: 'Frase 1\nFrase 2\nFrase 3' },
+  countdown: { w: 600, h: 150, fs: 120, al: 'center', sh: true, min: 5, done: 'Começando!', lab: '' },
+  bar: { w: 640, h: 80, bw: 5, r: 28, bc: 'p', fill: 'pn', fa: 95, lab: 'Meta', val: 30, max: 100, fs: 28, pct: false, cur: '' }
+};
+
+/* ---------- estado ---------- */
+let cfg, sel = null, tab = 'E', zoom = 0.5, hist = [], histI = -1, presetKey = 'jogo';
+const clone = o => JSON.parse(JSON.stringify(o));
+const uid = () => 'e' + Math.random().toString(36).slice(2, 7);
+function load(c) { cfg = K.normalize(clone(c)); sel = null; hist = []; histI = -1; commit(true); fullRender(); }
+function commit(silent) {
+  const snap = JSON.stringify(cfg);
+  if (hist[histI] === snap) return;
+  hist = hist.slice(0, histI + 1); hist.push(snap); if (hist.length > 80) hist.shift(); histI = hist.length - 1;
+  if (!silent) save();
+}
+function save() { try { localStorage.setItem('overlaykit-cfg', JSON.stringify(cfg)); } catch (e) {} }
+function undo(d) { const i = histI + d; if (i < 0 || i >= hist.length) return; histI = i; cfg = JSON.parse(hist[i]); if (!cfg.els.find(e => e.id === sel)) sel = null; save(); fullRender(); }
+const getSel = () => cfg.els.find(e => e.id === sel);
+const nameOf = e => { const f = (SCHEMA[e.type] || {}).name; let n = String(e[f] || '').split('\n')[0].replace(/https?:\/\//, '').slice(0, 26); return (n ? n : t('tipos')[e.type]); };
+
+/* ---------- renderizacao do palco ---------- */
+function fullRender() {
+  const r = $('root');
+  K.render(cfg, r, { editor: true, noEmbed: !$('embck').checked });
+  applyZoom(); drawList(); drawInspector(); drawSel(); updateLink();
+}
+function applyZoom() {
+  const z = zoom, c = cfg.canvas;
+  $('escala').style.width = c.w * z + 'px'; $('escala').style.height = c.h * z + 'px';
+  $('root').style.transform = `scale(${z})`; $('zv').textContent = Math.round(z * 100) + '%'; $('zoom').value = Math.round(z * 100);
+}
+function fitZoom() {
+  const p = $('palco'); const z = Math.min((p.clientWidth - 34) / cfg.canvas.w, (p.clientHeight - 34) / cfg.canvas.h);
+  zoom = Math.max(.1, Math.min(1.5, z)); applyZoom(); drawSel();
+}
+function geoUpdate(e) {                     // so geometria: sem re-render completo
+  const n = $('root').querySelector(`[data-id="${e.id}"]`); if (!n) return fullRender();
+  n.style.left = e.x + 'px'; n.style.top = e.y + 'px'; n.style.width = e.w + 'px'; n.style.height = e.h + 'px';
+}
+const HANDLES = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+function drawSel() {
+  const s = $('sel'), e = getSel(); s.innerHTML = '';
+  if (!e) { s.style.display = 'none'; return; }
+  const z = zoom; s.style.display = 'block';
+  s.style.left = e.x * z + 'px'; s.style.top = e.y * z + 'px'; s.style.width = e.w * z + 'px'; s.style.height = e.h * z + 'px';
+  s.style.transform = e.rot ? `rotate(${e.rot}deg)` : '';
+  HANDLES.forEach(h => {
+    const i = document.createElement('i'); i.dataset.h = h;
+    const x = h.includes('w') ? 0 : h.includes('e') ? 100 : 50, y = h.includes('n') ? 0 : h.includes('s') ? 100 : 50;
+    i.style.cssText = `left:calc(${x}% - 6px);top:calc(${y}% - 6px);cursor:${h === 'n' || h === 's' ? 'ns' : h === 'e' || h === 'w' ? 'ew' : (h === 'nw' || h === 'se') ? 'nwse' : 'nesw'}-resize`;
+    s.appendChild(i);
+  });
+}
+function guide(list) {
+  const g = $('guias'); g.innerHTML = '';
+  if (!$('guiasck').checked) return;
+  list.forEach(([o, v]) => { const d = document.createElement('div'); d.style.cssText = o === 'v' ? `left:${v * zoom}px;top:0;bottom:0;width:1px` : `top:${v * zoom}px;left:0;right:0;height:1px`; g.appendChild(d); });
+}
+
+/* ---------- interacao: mover / redimensionar ---------- */
+let drag = null;
+const snapV = v => { const g = +$('snap').value; return g ? Math.round(v / g) * g : Math.round(v); };
+function pt(ev) { const r = $('escala').getBoundingClientRect(); return { x: (ev.clientX - r.left) / zoom, y: (ev.clientY - r.top) / zoom }; }
+$('escala').addEventListener('pointerdown', ev => {
+  const h = ev.target.dataset && ev.target.dataset.h;
+  if (h) { const e = getSel(); drag = { mode: 'resize', h, e, start: pt(ev), o: { x: e.x, y: e.y, w: e.w, h: e.h } }; ev.target.setPointerCapture(ev.pointerId); ev.preventDefault(); return; }
+  const n = ev.target.closest('.ok-el');
+  if (!n) { sel = null; drawSel(); drawList(); drawInspector(); return; }
+  const e = cfg.els.find(x => x.id === n.dataset.id); if (!e) return;
+  if (sel !== e.id) { sel = e.id; drawSel(); drawList(); drawInspector(); }
+  drag = { mode: 'move', e, start: pt(ev), o: { x: e.x, y: e.y, w: e.w, h: e.h } };
+  $('escala').setPointerCapture(ev.pointerId); ev.preventDefault();
+});
+addEventListener('pointermove', ev => {
+  if (!drag) return;
+  const p = pt(ev), dx = p.x - drag.start.x, dy = p.y - drag.start.y, e = drag.e, o = drag.o, W = cfg.canvas.w, H = cfg.canvas.h, gl = [];
+  if (drag.mode === 'move') {
+    e.x = snapV(o.x + dx); e.y = snapV(o.y + dy);
+    const T = 8 / zoom;                                   // imã nas bordas e no centro do canvas
+    [[e.x, 0, 'v'], [e.x + e.w, W, 'v'], [e.x + e.w / 2, W / 2, 'v']].forEach(([a, b, o2]) => { if (Math.abs(a - b) < T) { e.x += b - a; gl.push([o2, b]); } });
+    [[e.y, 0, 'h'], [e.y + e.h, H, 'h'], [e.y + e.h / 2, H / 2, 'h']].forEach(([a, b, o2]) => { if (Math.abs(a - b) < T) { e.y += b - a; gl.push([o2, b]); } });
+  } else {
+    const h = drag.h; let x = o.x, y = o.y, w = o.w, hh = o.h;
+    if (h.includes('e')) w = Math.max(10, snapV(o.w + dx));
+    if (h.includes('s')) hh = Math.max(10, snapV(o.h + dy));
+    if (h.includes('w')) { const nx = snapV(o.x + dx); w = Math.max(10, o.w + (o.x - nx)); x = o.x + o.w - w; }
+    if (h.includes('n')) { const ny = snapV(o.y + dy); hh = Math.max(10, o.h + (o.y - ny)); y = o.y + o.h - hh; }
+    e.x = x; e.y = y; e.w = w; e.h = hh;
+  }
+  guide(gl); geoUpdate(e); drawSel(); syncGeoInputs(e);
+});
+addEventListener('pointerup', () => { if (!drag) return; const was = drag; drag = null; guide([]); if (was.e.type === 'lower' || was.e.type === 'embed' || was.e.type === 'frame' || was.e.type === 'bar' || was.e.type === 'ticker' || was.e.type === 'clock' || was.e.type === 'text' || was.e.type === 'image') { fullRenderKeep(); } commit(); });
+function fullRenderKeep() { const r = $('root'); K.render(cfg, r, { editor: true, noEmbed: !$('embck').checked }); applyZoom(); drawSel(); updateLink(); }
+
+addEventListener('keydown', ev => {
+  const tag = (ev.target.tagName || '').toLowerCase();
+  const typing = tag === 'input' || tag === 'textarea' || tag === 'select';
+  if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z') { if (typing && tag !== 'select') return; ev.preventDefault(); undo(ev.shiftKey ? 1 : -1); return; }
+  if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'y') { ev.preventDefault(); undo(1); return; }
+  if (typing) return;
+  const e = getSel(); if (!e) return;
+  if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'd') { ev.preventDefault(); dupEl(); return; }
+  if (ev.key === 'Delete' || ev.key === 'Backspace') { ev.preventDefault(); delEl(); return; }
+  const st = ev.shiftKey ? 10 : 1;
+  const mv = { ArrowLeft: [-st, 0], ArrowRight: [st, 0], ArrowUp: [0, -st], ArrowDown: [0, st] }[ev.key];
+  if (mv) { ev.preventDefault(); e.x += mv[0]; e.y += mv[1]; geoUpdate(e); drawSel(); syncGeoInputs(e); clearTimeout(window.__nt); window.__nt = setTimeout(() => { commit(); fullRenderKeep(); }, 300); }
+});
+
+/* ---------- operacoes ---------- */
+function addEl(type) {
+  const d = clone(DEF[type]); const c = cfg.canvas;
+  const e = Object.assign({ id: uid(), type, x: Math.round((c.w - d.w) / 2 / 10) * 10, y: Math.round((c.h - d.h) / 2 / 10) * 10 }, d);
+  cfg.els.push(e); sel = e.id; commit(); fullRender();
+}
+function dupEl() { const e = getSel(); if (!e) return; const n = clone(e); n.id = uid(); n.x += 30; n.y += 30; cfg.els.splice(cfg.els.indexOf(e) + 1, 0, n); sel = n.id; commit(); fullRender(); }
+function delEl() { const e = getSel(); if (!e) return; cfg.els.splice(cfg.els.indexOf(e), 1); sel = null; commit(); fullRender(); }
+function moveZ(id, d) { const i = cfg.els.findIndex(e => e.id === id), j = i + d; if (j < 0 || j >= cfg.els.length) return; const [x] = cfg.els.splice(i, 1); cfg.els.splice(j, 0, x); commit(); fullRender(); }
+
+/* ---------- lista de camadas ---------- */
+function drawList() {
+  const l = $('lista'); l.innerHTML = '';
+  if (!cfg.els.length) { l.innerHTML = `<div class="vazio">${t('semEl')}</div>`; return; }
+  cfg.els.slice().reverse().forEach(e => {
+    const d = document.createElement('div'); d.className = 'it' + (e.id === sel ? ' sel' : ''); d.dataset.id = e.id;
+    d.innerHTML = `<span>${ICON[e.type] || '▫'}</span><span class="n">${K.esc(nameOf(e))}</span>` +
+      `<button data-a="eye" title="visível">${e.hide ? '🚫' : '👁'}</button><button data-a="up" title="↑">▲</button><button data-a="dn" title="↓">▼</button>`;
+    d.onclick = ev => {
+      const a = ev.target.dataset.a;
+      if (a === 'eye') { e.hide = !e.hide; commit(); fullRender(); return; }
+      if (a === 'up') { moveZ(e.id, 1); return; }
+      if (a === 'dn') { moveZ(e.id, -1); return; }
+      sel = e.id; drawList(); drawInspector(); drawSel(); tab = 'E'; setTab();
+    };
+    l.appendChild(d);
+  });
+}
+
+/* ---------- inspetor ---------- */
+function setTab() { $('tabE').classList.toggle('on', tab === 'E'); $('tabG').classList.toggle('on', tab === 'G'); drawInspector(); }
+$('tabE').onclick = () => { tab = 'E'; setTab(); }; $('tabG').onclick = () => { tab = 'G'; setTab(); };
+let upT;
+function changed(full) { clearTimeout(upT); upT = setTimeout(() => { commit(); }, 350); if (full) fullRenderKeep2(); }
+function fullRenderKeep2() { K.render(cfg, $('root'), { editor: true, noEmbed: !$('embck').checked }); applyZoom(); drawSel(); drawList(); updateLink(); }
+const optLabel = o => Array.isArray(o[1]) ? L(o[1][0], o[1][1]) : o[1];
+
+function field(e, key, obj) {
+  const d = F[key]; if (!d) return null; obj = obj || e;
+  const kind = d[0], row = document.createElement('div'); row.className = 'f';
+  const lab = document.createElement('span'); lab.textContent = L(d[1][0], d[1][1]); row.appendChild(lab);
+  const box = document.createElement('div'); box.className = 'c'; row.appendChild(box);
+  const val = obj[key];
+  const set = (v, full) => { if (v === '' || v === undefined) delete obj[key]; else obj[key] = v; changed(full !== false); };
+  if (kind === 'n') {
+    const r = document.createElement('input'); r.type = 'range'; r.min = d[2]; r.max = d[3]; r.step = d[4];
+    const dv = { bw: cfg.theme.bw, r: cfg.theme.r, fa: 100, glow: 0, fs: 40, fsp: 100, lh: 1.15, ls: 0, tfs: 22, secs: 8 }[key];
+    const cur = key === 'secs' ? (e.sec != null ? e.sec : 8) : key === 'fsp' ? (e.fs != null ? e.fs : 100) : (val != null ? val : dv);
+    r.value = cur; const n = document.createElement('input'); n.type = 'number'; n.step = d[4]; n.value = cur; n.style.width = '62px';
+    const write = v => { v = +v; if (isNaN(v)) return; const real = key === 'secs' ? 'sec' : key === 'fsp' ? 'fs' : key; obj[real] = v; r.value = v; n.value = v; changed(true); };
+    r.oninput = () => write(r.value); n.oninput = () => write(n.value); box.append(r, n);
+  } else if (kind === 't') {
+    const i = document.createElement('input'); i.type = 'text'; i.value = val || ''; i.style.width = '100%'; i.oninput = () => set(i.value); box.appendChild(i);
+  } else if (kind === 'ta') {
+    const i = document.createElement('textarea'); i.rows = d[2] || 3; i.value = val || ''; i.oninput = () => set(i.value); box.appendChild(i);
+    row.style.gridTemplateColumns = '1fr'; row.insertBefore(lab, box);
+  } else if (kind === 'k') {
+    const i = document.createElement('input'); i.type = 'checkbox'; i.checked = !!val; i.onchange = () => { if (i.checked) obj[key] = true; else delete obj[key]; changed(true); }; box.appendChild(i);
+  } else if (kind === 's') {
+    const s = document.createElement('select');
+    d[2].forEach(o => { const op = document.createElement('option'); op.value = Array.isArray(o) ? o[0] : o; op.textContent = Array.isArray(o) ? optLabel(o) : o; s.appendChild(op); });
+    s.value = val != null ? val : d[2][0][0]; s.onchange = () => { const v = isNaN(+s.value) || s.value === '' ? s.value : +s.value; if (v === '' ) delete obj[key]; else obj[key] = v; changed(true); }; box.appendChild(s);
+  } else if (kind === 'c' || kind === 'c0') {
+    const s = document.createElement('select'); const toks = [['p', L('Tema: primária', 'Theme: primary')], ['a', L('Tema: acento', 'Theme: accent')], ['pn', L('Tema: painel', 'Theme: panel')], ['tx', L('Tema: texto', 'Theme: text')], ['#', L('Personalizada…', 'Custom…')]];
+    if (kind === 'c0') toks.unshift(['', L('Nenhum', 'None')]);
+    toks.forEach(o => { const op = document.createElement('option'); op.value = o[0]; op.textContent = o[1]; s.appendChild(op); });
+    const ci = document.createElement('input'); ci.type = 'color';
+    const isTok = v => ['p', 'a', 'pn', 'tx'].includes(v);
+    const sync = () => { const v = obj[key]; s.value = !v ? (kind === 'c0' ? '' : (key === 'bc' ? 'p' : '#')) : isTok(v) ? v : '#'; if (kind !== 'c0' && !v) s.value = key === 'bc' ? 'p' : key === 'c' ? 'tx' : 'p'; ci.style.display = s.value === '#' ? '' : 'none'; ci.value = /^#[0-9a-f]{6}$/i.test(v || '') ? v : K.color(v || 'p', cfg.theme).slice(0, 7); };
+    s.onchange = () => { if (s.value === '#') { obj[key] = ci.value || '#ffffff'; } else if (s.value === '') delete obj[key]; else obj[key] = s.value; sync(); changed(true); };
+    ci.oninput = () => { obj[key] = ci.value; changed(true); };
+    box.append(s, ci); sync();
+  }
+  return row;
+}
+function syncGeoInputs(e) { ['x', 'y', 'w', 'h'].forEach(k => { const i = document.querySelector(`#geo [data-k="${k}"]`); if (i && document.activeElement !== i) i.value = Math.round(e[k]); }); }
+
+function drawInspector() {
+  const box = $('inspetor'); box.innerHTML = '';
+  if (tab === 'G') return drawGeneral(box);
+  const e = getSel();
+  if (!e) { box.innerHTML = `<p class="vazio">${t('nada')}</p>`; return; }
+  const sc = SCHEMA[e.type] || { g: [] };
+  const title = document.createElement('h2'); title.textContent = ICON[e.type] + ' ' + t('tipos')[e.type]; box.appendChild(title);
+  const acts = document.createElement('div'); acts.className = 'grp'; acts.style.marginBottom = '6px';
+  acts.innerHTML = `<button class="sm" id="bd">${t('dup')}</button><button class="sm" id="bx">${t('del')}</button>`; box.appendChild(acts);
+  $('bd').onclick = dupEl; $('bx').onclick = delEl;
+  // geometria
+  const h = document.createElement('h2'); h.textContent = t('posicao'); box.appendChild(h);
+  const g = document.createElement('div'); g.className = 'f4'; g.id = 'geo';
+  [['x', 'X'], ['y', 'Y'], ['w', L('Larg', 'W')], ['h', L('Alt', 'H')]].forEach(([k, lb]) => {
+    const l = document.createElement('label'); l.textContent = lb; const i = document.createElement('input'); i.type = 'number'; i.dataset.k = k; i.value = Math.round(e[k]);
+    i.oninput = () => { const v = +i.value; if (isNaN(v)) return; e[k] = (k === 'w' || k === 'h') ? Math.max(1, v) : v; geoUpdate(e); drawSel(); changed(false); setTimeout(fullRenderKeepSoft, 0); };
+    l.appendChild(i); g.appendChild(l);
+  });
+  box.appendChild(g);
+  const common = document.createElement('div');
+  [['rot', ['Rotação (°)', 'Rotation (°)'], -180, 180, 1], ['op', ['Opacidade %', 'Opacity %'], 0, 100, 1]].forEach(([k, lb, mn, mx, st]) => {
+    const row = document.createElement('div'); row.className = 'f'; const sp = document.createElement('span'); sp.textContent = L(lb[0], lb[1]);
+    const c = document.createElement('div'); c.className = 'c'; const r = document.createElement('input'); r.type = 'range'; r.min = mn; r.max = mx; r.step = st; r.value = e[k] != null ? e[k] : (k === 'op' ? 100 : 0);
+    const n = document.createElement('input'); n.type = 'number'; n.style.width = '62px'; n.value = r.value;
+    const w = v => { e[k] = +v; r.value = v; n.value = v; changed(true); }; r.oninput = () => w(r.value); n.oninput = () => w(n.value); c.append(r, n); row.append(sp, c); common.appendChild(row);
+  });
+  const an = document.createElement('div'); an.className = 'f'; an.innerHTML = `<span>${L('Animação', 'Animation')}</span>`;
+  const as = document.createElement('select'); ANIMS.forEach(o => { const op = document.createElement('option'); op.value = o[0]; op.textContent = optLabel(o); as.appendChild(op); }); as.value = e.an || 'none'; as.onchange = () => { e.an = as.value; changed(true); }; an.appendChild(as); common.appendChild(an);
+  box.appendChild(common);
+  // helper de chat
+  if (e.type === 'embed') {
+    const hp = document.createElement('div'); hp.className = 'f'; hp.style.gridTemplateColumns = '1fr';
+    hp.innerHTML = `<span>${t('canal')}</span>`; const row = document.createElement('div'); row.className = 'c';
+    const ci = document.createElement('input'); ci.type = 'text'; ci.placeholder = 'seucanal'; ci.style.flex = 1;
+    let sv = ''; try { sv = localStorage.getItem('overlaykit-canal') || ''; } catch (x) {} ci.value = sv;
+    const b1 = document.createElement('button'); b1.className = 'sm'; b1.textContent = t('chatTw');
+    const b2 = document.createElement('button'); b2.className = 'sm'; b2.textContent = t('chatBC');
+    const fill = u => { const c = (ci.value || '').trim().toLowerCase().replace(/^#/, ''); if (!c) { ci.focus(); return; } try { localStorage.setItem('overlaykit-canal', c); } catch (x) {} e.url = u(c); commit(); fullRender(); };
+    b1.onclick = () => fill(c => `https://www.twitch.tv/popout/${c}/chat?popout=`);
+    b2.onclick = () => fill(c => `https://www.teuzin.com.br/TeuzinBetterChat/chat.html?channel=${c}&size=24&max=14&fade=0&avatar=1`);
+    row.append(ci); hp.appendChild(row); const r2 = document.createElement('div'); r2.className = 'c'; r2.style.marginTop = '5px'; r2.append(b1, b2); hp.appendChild(r2); box.appendChild(hp);
+  }
+  sc.g.forEach(([gn, keys]) => {
+    const hh = document.createElement('h2'); hh.textContent = L(gn[0], gn[1]); box.appendChild(hh);
+    keys.forEach(k => { const f = field(e, k); if (f) box.appendChild(f); });
+  });
+}
+function fullRenderKeepSoft() { K.render(cfg, $('root'), { editor: true, noEmbed: !$('embck').checked }); applyZoom(); drawSel(); updateLink(); drawList(); }
+
+function drawGeneral(box) {
+  const c = cfg, th = c.theme, bg = c.bg;
+  const mk = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d; };
+  box.innerHTML = '';
+  const h1 = document.createElement('h2'); h1.textContent = t('canvas'); box.appendChild(h1);
+  const sizes = `<div class="f"><span>${t('tamanho')}</span><div class="c"><input type="number" id="cw" value="${c.canvas.w}" style="width:70px"> × <input type="number" id="ch" value="${c.canvas.h}" style="width:70px"></div></div>`;
+  box.appendChild(mk(sizes));
+  $('cw').oninput = $('ch').oninput = () => { c.canvas.w = Math.max(100, +$('cw').value || 1920); c.canvas.h = Math.max(100, +$('ch').value || 1080); commit(); fullRender(); fitZoom(); };
+  const h2 = document.createElement('h2'); h2.textContent = t('cores'); box.appendChild(h2);
+  [['p', L('Primária (bordas)', 'Primary (borders)')], ['a', L('Acento', 'Accent')], ['pn', L('Painel (fundos)', 'Panel (fills)')], ['tx', L('Texto', 'Text')]].forEach(([k, lb]) => {
+    const d = mk(`<div class="f"><span>${lb}</span><div class="c"><input type="color" value="${th[k]}"><input type="text" value="${th[k]}" style="width:90px"></div></div>`);
+    const ci = d.querySelector('input[type=color]'), ti = d.querySelector('input[type=text]');
+    ci.oninput = () => { th[k] = ci.value; ti.value = ci.value; $('tema').value = ''; changed(true); };
+    ti.oninput = () => { if (/^#[0-9a-f]{6}$/i.test(ti.value)) { th[k] = ti.value; ci.value = ti.value; $('tema').value = ''; changed(true); } };
+    box.appendChild(d);
+  });
+  const h3 = document.createElement('h2'); h3.textContent = t('tipografia'); box.appendChild(h3);
+  const fd = mk(`<div class="f"><span>${L('Fonte do tema', 'Theme font')}</span><div class="c"><select id="thf"></select></div></div>`); box.appendChild(fd);
+  Object.keys(K.FONTS).forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = K.FONTS[k].label; $('thf').appendChild(o); }); $('thf').value = th.font;
+  $('thf').onchange = () => { th.font = $('thf').value; changed(true); };
+  [['bw', L('Borda padrão', 'Default border'), 0, 30], ['r', L('Arredond. padrão', 'Default radius'), 0, 200]].forEach(([k, lb, mn, mx]) => {
+    const d = mk(`<div class="f"><span>${lb}</span><div class="c"><input type="range" min="${mn}" max="${mx}" value="${th[k]}"><span class="v">${th[k]}</span></div></div>`);
+    const r = d.querySelector('input'), v = d.querySelector('.v'); r.oninput = () => { th[k] = +r.value; v.textContent = r.value; changed(true); }; box.appendChild(d);
+  });
+  const h4 = document.createElement('h2'); h4.textContent = t('bgT'); box.appendChild(h4);
+  const bd = mk(`<div class="f"><span>${L('Tipo', 'Type')}</span><div class="c"><select id="bgt"><option value="none">${L('Transparente', 'Transparent')}</option><option value="solid">${L('Cor sólida', 'Solid')}</option><option value="gradient">${L('Degradê', 'Gradient')}</option><option value="radial">${L('Brilho radial', 'Radial glow')}</option></select></div></div>
+    <div class="f"><span>${L('Cor 1', 'Color 1')}</span><div class="c"><input type="color" id="bg1" value="${bg.c1}"></div></div>
+    <div class="f"><span>${L('Cor 2', 'Color 2')}</span><div class="c"><input type="color" id="bg2" value="${bg.c2}"></div></div>
+    <div class="f"><span>${L('Ângulo', 'Angle')}</span><div class="c"><input type="range" id="bga" min="0" max="360" value="${bg.angle}"></div></div>
+    <div class="f"><span>${L('Opacidade %', 'Opacity %')}</span><div class="c"><input type="range" id="bgo" min="0" max="100" value="${bg.op}"></div></div>
+    <div class="f"><span>${L('Estrelas', 'Stars')}</span><div class="c"><input type="checkbox" id="bgs" ${bg.stars ? 'checked' : ''}></div></div>`);
+  box.appendChild(bd); $('bgt').value = bg.type;
+  $('bgt').onchange = () => { bg.type = $('bgt').value; changed(true); }; $('bg1').oninput = () => { bg.c1 = $('bg1').value; changed(true); }; $('bg2').oninput = () => { bg.c2 = $('bg2').value; changed(true); };
+  $('bga').oninput = () => { bg.angle = +$('bga').value; changed(true); }; $('bgo').oninput = () => { bg.op = +$('bgo').value; changed(true); }; $('bgs').onchange = () => { bg.stars = $('bgs').checked; changed(true); };
+  const rs = document.createElement('div'); rs.style.marginTop = '12px'; rs.innerHTML = `<button id="rst">${t('resetar')}</button>`; box.appendChild(rs);
+  $('rst').onclick = () => { load(OverlayPresets[presetKey].cfg); fitZoom(); };
+}
+
+/* ---------- exportar ---------- */
+function linkBase() { try { return new URL('overlay.html', location.href).href; } catch (e) { return 'overlay.html'; } }
+function makeLink() { return linkBase() + '?c=' + K.b64enc(slim(cfg)); }
+function slim(c) { const o = clone(c); o.els.forEach(e => { if (e.hide) return; }); return o; }
+function updateLink() {
+  const l = makeLink(); $('link').value = l;
+  $('sub').textContent = `${cfg.canvas.w}×${cfg.canvas.h} · ${l.length} ${t('tamLink')}`;
+  $('link').title = t('obs') + ' ' + cfg.canvas.w + ' × ' + cfg.canvas.h;
+}
+async function copy(txt) { try { await navigator.clipboard.writeText(txt); } catch (e) { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); } }
+function toast(btn, msg) { const o = btn.textContent; btn.textContent = msg; setTimeout(() => btn.textContent = o, 1400); }
+$('copiar').onclick = async () => { await copy($('link').value); toast($('copiar'), t('copiado')); };
+$('cjson').onclick = async () => { await copy(JSON.stringify(cfg, null, 2)); toast($('cjson'), t('copiado')); };
+$('bjson').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' })); a.download = 'overlay-config.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
+$('abrir').onclick = () => window.open($('link').value + '&preview=1', '_blank');
+$('imp').onclick = () => { $('impTxt').value = ''; $('dlg').showModal(); };
+$('impCancel').onclick = () => $('dlg').close();
+$('impFile').onchange = async () => { const f = $('impFile').files[0]; if (f) $('impTxt').value = await f.text(); };
+$('impOk').onclick = () => {
+  try {
+    let txt = $('impTxt').value.trim(), o;
+    if (/^https?:|^file:/i.test(txt) || txt.includes('?c=')) { const u = new URL(txt, location.href); o = K.b64dec(u.searchParams.get('c')); } else o = JSON.parse(txt);
+    load(o); $('dlg').close(); fitZoom();
+  } catch (e) { alert(t('invalido')); }
+};
+
+/* ---------- barra superior ---------- */
+function fillSelects() {
+  const ps = $('preset'); ps.innerHTML = '';
+  const gr = {};
+  Object.keys(OverlayPresets).forEach(k => { const p = OverlayPresets[k], gk = p.grupo || 'h';
+    if (!gr[gk]) { gr[gk] = document.createElement('optgroup'); gr[gk].label = ({ h: L('Horizontal (16:9)', 'Horizontal (16:9)'), v: L('Vertical (9:16)', 'Vertical (9:16)'), x: L('Outros', 'Other') })[gk] || gk; ps.appendChild(gr[gk]); }
+    const o = document.createElement('option'); o.value = k; o.textContent = p.nome[lang]; gr[gk].appendChild(o); });
+  ps.value = presetKey;
+  const ts = $('tema'); ts.innerHTML = `<option value="">${t('temaPers')}</option>`;
+  Object.keys(OverlayThemes).forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = OverlayThemes[k].nome[lang]; ts.appendChild(o); });
+  const tl = $('tela'); tl.innerHTML = ''; [['1920x1080', '1920×1080 (16:9)'], ['1280x720', '1280×720 (16:9)'], ['2560x1440', '2560×1440 (16:9)'], ['1080x1920', '1080×1920 (9:16)'], ['1080x1080', '1080×1080 (1:1)']].forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; tl.appendChild(o); });
+  tl.value = cfg ? cfg.canvas.w + 'x' + cfg.canvas.h : '1920x1080';
+}
+$('preset').onchange = () => { presetKey = $('preset').value; load(OverlayPresets[presetKey].cfg); fillSelects(); fitZoom(); };
+$('tema').onchange = () => { const k = $('tema').value; if (!k) return; Object.assign(cfg.theme, OverlayThemes[k].t); commit(); fullRender(); };
+$('tela').onchange = () => {
+  const [w, h] = $('tela').value.split('x').map(Number); const ow = cfg.canvas.w, oh = cfg.canvas.h;
+  if (confirm(L('Reescalar os elementos para o novo tamanho?', 'Rescale elements to the new size?'))) { const sx = w / ow, sy = h / oh; cfg.els.forEach(e => { e.x = Math.round(e.x * sx); e.w = Math.round(e.w * sx); e.y = Math.round(e.y * sy); e.h = Math.round(e.h * sy); }); }
+  cfg.canvas.w = w; cfg.canvas.h = h; commit(); fullRender(); fitZoom();
+};
+$('lang').onchange = () => { lang = $('lang').value; try { localStorage.setItem('overlaykit-lang', lang); } catch (e) {} applyLang(); };
+$('zoom').oninput = () => { zoom = +$('zoom').value / 100; applyZoom(); drawSel(); };
+$('fit').onclick = fitZoom;
+$('pbg').onchange = () => { $('palco').className = $('pbg').value; };
+$('embck').onchange = () => fullRender();
+$('undo').onclick = () => undo(-1); $('redo').onclick = () => undo(1);
+addEventListener('resize', () => { if (cfg) fitZoom(); });
+function buildAdd() { const a = $('add'); a.innerHTML = ''; Object.keys(DEF).forEach(k => { const b = document.createElement('button'); b.textContent = ICON[k] + ' ' + t('tipos')[k]; b.onclick = () => addEl(k); a.appendChild(b); }); }
+function applyLang() {
+  document.documentElement.lang = lang; $('lang').value = lang;
+  document.querySelectorAll('[data-t]').forEach(n => { const v = t(n.dataset.t); if (v) n.textContent = v; });
+  buildAdd(); fillSelects(); if (cfg) fullRender();
+}
+
+/* ---------- inicio ---------- */
+(function init() {
+  let saved = null; try { saved = JSON.parse(localStorage.getItem('overlaykit-cfg') || 'null'); } catch (e) {}
+  const P = new URLSearchParams(location.search);
+  try { if (P.get('c')) saved = K.b64dec(P.get('c')); } catch (e) {}
+  cfg = K.normalize(clone(saved && saved.els ? saved : OverlayPresets.jogo.cfg));
+  $('lang').value = lang; applyLang();
+  commit(true); fullRender(); fitZoom();
+  setTimeout(fitZoom, 60);
+})();
+})();
+</script>
+</body>
+</html>

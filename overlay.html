@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>OverlayKit</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  OverlayKit - página do overlay (fonte "Navegador" do OBS).
+  Parâmetros:
+    ?c=<config>        configuração em base64 (gerada pelo editor)
+    &src=<url>         alternativa: URL de um arquivo .json de configuração
+    &preset=<nome>     usa um preset pronto (veja presets.js)
+    &preview=1         mostra fundo quadriculado (para testar no navegador)
+    &fit=0             não redimensiona para a janela (padrão: ajusta ao tamanho da janela)
+-->
+<style>
+  html,body{margin:0;padding:0;background:transparent;overflow:hidden;height:100%}
+  body.preview{background:repeating-conic-gradient(#2b2b36 0 25%,#23232d 0 50%) 0 0/24px 24px}
+  #erro{position:fixed;inset:0;display:none;place-content:center;text-align:center;color:#fff;font:600 22px "Segoe UI",sans-serif;background:rgba(10,6,24,.9);padding:30px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="erro"></div>
+<script src="overlay.js"></script>
+<script src="presets.js"></script>
+<script>
+(async () => {
+  const P = new URLSearchParams(location.search);
+  const $ = id => document.getElementById(id);
+  if (P.get('preview') === '1') document.body.classList.add('preview');
+  const erro = m => { const e = $('erro'); e.style.display = 'grid'; e.innerHTML = m; };
+  let cfg = null;
+  try {
+    if (P.get('c')) cfg = OverlayKit.b64dec(P.get('c'));
+    else if (P.get('src')) cfg = await (await fetch(P.get('src'))).json();
+    else if (P.get('preset') && OverlayPresets[P.get('preset')]) cfg = OverlayPresets[P.get('preset')].cfg;
+  } catch (e) { return erro('Configuração inválida.<br><small>' + OverlayKit.esc(e.message) + '</small>'); }
+  if (!cfg) return erro('Nenhuma configuração no link.<br><small>Abra o <b>editor.html</b>, monte o overlay e copie o link.</small>');
+
+  const { cfg: c } = OverlayKit.render(cfg, $('root'));
+  const fit = () => {
+    if (P.get('fit') === '0') return;
+    const s = Math.min(innerWidth / c.canvas.w, innerHeight / c.canvas.h);
+    $('root').style.transform = Math.abs(s - 1) < 0.001 ? '' : 'scale(' + s + ')';
+  };
+  fit(); addEventListener('resize', fit);
+})();
+</script>
+</body>
+</html>
