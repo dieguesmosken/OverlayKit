@@ -82,6 +82,7 @@
   <div class="grp" style="margin-left:auto">
     <button id="undo" title="Ctrl+Z">↶</button><button id="redo" title="Ctrl+Y">↷</button>
     <button id="imp" data-t="importar">Importar</button>
+    <button id="btpl" data-t="btpl">⬇ Modelos prontos</button>
     <select id="lang"><option value="pt">Português</option><option value="en">English</option></select>
   </div>
 </header>
@@ -111,6 +112,7 @@
         <button id="abrir" data-t="abrir">Abrir</button>
         <button id="cjson" data-t="cjson">Copiar JSON</button>
         <button id="bjson" data-t="bjson">Baixar JSON</button>
+        <button class="pri" id="bimg" data-t="bimg">🖼 Baixar imagem</button>
       </div>
     </div>
   </section>
@@ -132,6 +134,13 @@
   </div>
 </dialog>
 
+<dialog id="dlgI">
+  <h2 id="dlgIT"></h2>
+  <div id="dlgIB"></div>
+  <p class="dica" id="dlgIM" style="min-height:1.4em"></p>
+  <div class="grp" style="margin-top:10px;justify-content:flex-end"><button id="dlgIC"></button><button class="pri" id="dlgIOk"></button></div>
+</dialog>
+
 <script src="overlay.js"></script>
 <script src="presets.js"></script>
 <script>
@@ -142,14 +151,14 @@ const K = OverlayKit, $ = id => document.getElementById(id);
 /* ---------- idioma ---------- */
 const UI = {
   pt: { preset:'Modelo', tema:'Tema', tela:'Tela', importar:'Importar', adicionar:'Adicionar', camadas:'Camadas', zoom:'Zoom', ajustar:'Ajustar', fundo:'Fundo da prévia', grade:'Grade', guias:'Guias', embeds:'Carregar chat/widgets na prévia',
-    copiar:'📋 Copiar link', abrir:'Abrir', cjson:'Copiar JSON', bjson:'Baixar JSON', elemento:'Elemento', geral:'Geral', cancelar:'Cancelar', aplicar:'Aplicar',
+    copiar:'📋 Copiar link', abrir:'Abrir', cjson:'Copiar JSON', bjson:'Baixar JSON', bimg:'🖼 Baixar imagem', btpl:'⬇ Modelos prontos', elemento:'Elemento', geral:'Geral', cancelar:'Cancelar', aplicar:'Aplicar',
     dicaLista:'Dica: arraste os elementos no quadro, use as alças para redimensionar e as setas do teclado para ajustar (Shift = 10px). Delete apaga, Ctrl+D duplica.',
     impDica:'Cole um link do OverlayKit ou o JSON de uma configuração (ou escolha um arquivo .json).', nada:'Selecione um elemento para editar.', semEl:'Nenhum elemento ainda. Use "Adicionar".',
     posicao:'Posição e tamanho', aparencia:'Aparência', conteudo:'Conteúdo', copiado:'Copiado!', invalido:'Não consegui ler essa configuração.', tamLink:'caracteres no link',
     obs:'No OBS: Fonte → Navegador, desmarque "Arquivo local" (ou marque, se estiver no PC) e use largura × altura =', dup:'Duplicar', del:'Excluir', canvas:'Tela (canvas)', tamanho:'Tamanho', cores:'Cores do tema', tipografia:'Fonte', bgT:'Fundo do overlay',
     resetar:'Restaurar modelo', temaPers:'Personalizado', chatTw:'Chat da Twitch (popout)', chatBC:'TeuzinBetterChat', canal:'Canal', aplicarCanal:'Preencher URL', tipos:{frame:'Quadro',text:'Texto',image:'Imagem',lower:'Barra com avatar',clock:'Relógio',embed:'Chat / widget',ticker:'Frases em rotação',bar:'Barra de meta',countdown:'Contagem regressiva'} },
   en: { preset:'Template', tema:'Theme', tela:'Canvas', importar:'Import', adicionar:'Add', camadas:'Layers', zoom:'Zoom', ajustar:'Fit', fundo:'Preview bg', grade:'Grid', guias:'Guides', embeds:'Load chat/widgets in preview',
-    copiar:'📋 Copy link', abrir:'Open', cjson:'Copy JSON', bjson:'Download JSON', elemento:'Element', geral:'General', cancelar:'Cancel', aplicar:'Apply',
+    copiar:'📋 Copy link', abrir:'Open', cjson:'Copy JSON', bjson:'Download JSON', bimg:'🖼 Download image', btpl:'⬇ Ready-made templates', elemento:'Element', geral:'General', cancelar:'Cancel', aplicar:'Apply',
     dicaLista:'Tip: drag elements on the canvas, use the handles to resize and the arrow keys to nudge (Shift = 10px). Delete removes, Ctrl+D duplicates.',
     impDica:'Paste an OverlayKit link or a configuration JSON (or choose a .json file).', nada:'Select an element to edit.', semEl:'No elements yet. Use "Add".',
     posicao:'Position & size', aparencia:'Appearance', conteudo:'Content', copiado:'Copied!', invalido:'Could not read that configuration.', tamLink:'characters in the link',
@@ -501,6 +510,56 @@ $('impOk').onclick = () => {
     if (/^https?:|^file:/i.test(txt) || txt.includes('?c=')) { const u = new URL(txt, location.href); o = K.b64dec(u.searchParams.get('c')); } else o = JSON.parse(txt);
     load(o); $('dlg').close(); fitZoom();
   } catch (e) { alert(t('invalido')); }
+};
+
+
+/* ---------- baixar imagem / modelos prontos ---------- */
+const fmtOpts = () => `
+  <div class="f"><span>${L('Formato', 'Format')}</span><div class="c"><select id="xfmt">
+    <option value="png">${L('PNG com fundo transparente', 'PNG, transparent background')}</option>
+    <option value="pngbg">${L('PNG com fundo colorido', 'PNG, solid background')}</option>
+    <option value="jpg">JPG</option></select></div></div>
+  <div class="f"><span>${L('Cor do fundo', 'Background color')}</span><div class="c"><input type="color" id="xbg" value="#0b0b12"></div></div>
+  <div class="f"><span>${L('Tamanho', 'Scale')}</span><div class="c"><select id="xesc"><option value="0.5">50%</option><option value="1" selected>100%</option><option value="2">200%</option></select></div></div>`;
+const lerFmt = () => { const f = $('xfmt').value; return { format: f === 'jpg' ? 'jpg' : 'png', bg: f === 'png' ? null : $('xbg').value, scale: +$('xesc').value }; };
+const info = m => { $('dlgIM').textContent = m || ''; };
+async function janela(titulo, corpo, okTxt, acao) {
+  $('dlgIT').textContent = titulo; $('dlgIB').innerHTML = corpo; info(''); $('dlgIC').textContent = L('Fechar', 'Close'); $('dlgIOk').textContent = okTxt;
+  $('dlgIC').onclick = () => $('dlgI').close();
+  $('dlgIOk').onclick = async () => { $('dlgIOk').disabled = true; try { await acao(); } catch (e) { info(L('Não deu: ', 'Failed: ') + (e.message || e)); } $('dlgIOk').disabled = false; };
+  $('dlgI').showModal();
+}
+$('bimg').onclick = () => janela(L('Baixar imagem do overlay', 'Download overlay image'),
+  fmtOpts() + `<label class="grp" style="margin-top:8px"><input type="checkbox" id="xnt"><span>${L('Remover os textos (só quadros e formas)', 'Remove all text (frames and shapes only)')}</span></label>
+  <p class="dica">${L('O chat/widgets (conteúdo de outros sites) não aparece na imagem. Relógio e contagem saem com o valor do momento.', 'Chat/widgets (other sites\' content) are not included. Clock and countdown show the current value.')}</p>`,
+  L('Baixar', 'Download'), async () => {
+    info(L('Gerando…', 'Rendering…')); const o = lerFmt();
+    const blob = await K.toImage(cfg, Object.assign(o, { noText: $('xnt').checked }));
+    K.baixar(blob, 'overlay-' + cfg.canvas.w + 'x' + cfg.canvas.h + (o.format === 'jpg' ? '.jpg' : '.png')); info(L('Pronto ✓', 'Done ✓'));
+  });
+$('btpl').onclick = () => {
+  const keys = Object.keys(OverlayPresets).filter(k => k !== 'vazio');
+  const lista = keys.map(k => `<label class="grp" style="margin:3px 0"><input type="checkbox" class="xtp" value="${k}" checked><span>${K.esc(OverlayPresets[k].nome[lang])} <small style="color:var(--su)">${OverlayPresets[k].cfg.canvas.w}×${OverlayPresets[k].cfg.canvas.h}</small></span></label>`).join('');
+  janela(L('Modelos prontos (sem texto)', 'Ready-made templates (no text)'),
+    `<p class="dica">${L('Baixa os modelos padrão como imagem, só com quadros e formas, sem nenhum texto, para você usar no OBS ou editar em outro programa. Vários arquivos saem juntos num .zip.', 'Downloads the stock templates as images, with frames and shapes only and no text, for use in OBS or other editors. Several files come as one .zip.')}</p>` +
+    fmtOpts() + `<label class="grp" style="margin-top:8px"><input type="checkbox" id="xtema"><span>${L('Usar as cores do tema atual', 'Use the current theme colors')}</span></label>
+    <label class="grp" style="margin-top:4px"><input type="checkbox" id="xjs"><span>${L('Incluir também o arquivo .json de cada modelo', 'Also include each template\'s .json file')}</span></label>
+    <div class="grp" style="margin:10px 0 4px"><b>${L('Modelos', 'Templates')}</b><button class="sm" id="xall">${L('Todos', 'All')}</button><button class="sm" id="xnone">${L('Nenhum', 'None')}</button></div>
+    <div style="max-height:220px;overflow:auto">${lista}</div>`,
+    L('Baixar', 'Download'), async () => {
+      const sel2 = [...document.querySelectorAll('.xtp:checked')].map(x => x.value); if (!sel2.length) { info(L('Marque ao menos um modelo.', 'Tick at least one template.')); return; }
+      const o = lerFmt(), ext = o.format === 'jpg' ? '.jpg' : '.png', arq = [];
+      for (let i = 0; i < sel2.length; i++) {
+        info(L('Gerando ', 'Rendering ') + (i + 1) + '/' + sel2.length + '…');
+        const k = sel2[i], p = OverlayPresets[k], base = K.slug(p.nome.pt);
+        arq.push({ name: base + ext, blob: await K.toImage(p.cfg, Object.assign({}, o, { noText: true, theme: $('xtema').checked ? cfg.theme : null })) });
+        if ($('xjs').checked) arq.push({ name: base + '.json', blob: new Blob([JSON.stringify(p.cfg, null, 2)], { type: 'application/json' }) });
+      }
+      if (arq.length === 1) K.baixar(arq[0].blob, arq[0].name); else K.baixar(await K.zip(arq), 'overlaykit-modelos.zip');
+      info(L('Pronto ✓', 'Done ✓'));
+    });
+  $('xall').onclick = () => document.querySelectorAll('.xtp').forEach(x => x.checked = true);
+  $('xnone').onclick = () => document.querySelectorAll('.xtp').forEach(x => x.checked = false);
 };
 
 /* ---------- barra superior ---------- */

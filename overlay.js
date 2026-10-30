@@ -99,10 +99,10 @@
   }
 
   const BUILDERS = {
-    frame(e, th) {
+    frame(e, th, opts) {
       const n = document.createElement('div');
       n.style.cssText = boxStyle(e, th) + 'box-sizing:border-box;';
-      if (e.tag) {
+      if (e.tag && !(opts && opts.noText)) {
         const t = document.createElement('div');
         t.textContent = e.tag;
         t.style.cssText = `position:absolute;left:${num(e.r, th.r) + 6}px;top:${-num(e.bw, th.bw) - Math.round(num(e.tfs, 22) * .75)}px;` +
@@ -125,7 +125,7 @@
       n.appendChild(span); n._dyn = /\{(hora|time|data|date|dia)\}/i.test(e.txt || '');
       return n;
     },
-    image(e, th) {
+    image(e, th, opts) {
       const n = document.createElement('div');
       n.style.cssText = boxStyle(Object.assign({ bw: 0 }, e), th) + 'overflow:hidden;box-sizing:border-box;';
       if (e.src) {
@@ -135,11 +135,12 @@
         n.appendChild(im);
       } else {
         n.style.background = n.style.background || rgba(color('a', th), .25);
-        n.innerHTML = '<div style="position:absolute;inset:0;display:grid;place-content:center;font-size:40px;opacity:.6">🖼️</div>';
+        if (!(opts && opts.still)) n.innerHTML = '<div style="position:absolute;inset:0;display:grid;place-content:center;font-size:40px;opacity:.6">🖼️</div>';
       }
       return n;
     },
-    lower(e, th) {
+    lower(e, th, opts) {
+      if (opts && opts.noText) e = Object.assign({}, e, { t1: '', t2: '', t3: '', _nt: 1 });
       const n = document.createElement('div');
       const h = num(e.h, 180), pad = Math.round(h * .12), fs = num(e.fs, 100) / 100;
       n.style.cssText = boxStyle(Object.assign({ fill: 'pn' }, e), th) +
@@ -149,7 +150,7 @@
         const av = document.createElement('div');
         av.style.cssText = `flex:none;width:${avs}px;height:${avs}px;border-radius:${e.avsq ? Math.round(avs * .18) : 999}px;border:${Math.max(3, Math.round(avs * .05))}px solid ${color(e.avc || 'a', th)};` +
           `background:${rgba(color('p', th), .35)} center/cover;display:grid;place-content:center;font-weight:800;font-size:${Math.round(avs * .4)}px;color:${color('tx', th)};overflow:hidden`;
-        if (e.av) { av.style.backgroundImage = `url("${String(e.av).replace(/"/g, '%22')}")`; } else av.textContent = (e.t1 || '?').trim().charAt(0).toUpperCase();
+        if (e.av) { av.style.backgroundImage = `url("${String(e.av).replace(/"/g, '%22')}")`; } else if (!e._nt) av.textContent = (e.t1 || '?').trim().charAt(0).toUpperCase();
         n.appendChild(av);
       }
       const box = document.createElement('div'); box.style.cssText = 'flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;';
@@ -210,7 +211,7 @@
       sp.dataset.items = JSON.stringify(items); sp.textContent = tokens(items[0] || '');
       n.appendChild(sp); n._ticker = true; return n;
     },
-    bar(e, th) {
+    bar(e, th, opts) {
       const n = document.createElement('div');
       const val = num(e.val, 0), max = Math.max(1, num(e.max, 100)), pct = clamp(val / max * 100, 0, 100);
       const fs = num(e.fs, 26), h = num(e.h, 60);
@@ -220,7 +221,7 @@
       const lab = document.createElement('div');
       lab.style.cssText = `position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 ${Math.round(h * .3)}px;font-weight:800;font-size:${fs}px;color:${color(e.c || 'tx', th)};text-shadow:0 1px 6px rgba(0,0,0,.7)`;
       const fmt = x => (e.cur ? e.cur + ' ' : '') + x.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
-      lab.innerHTML = `<span>${esc(tokens(e.lab || ''))}</span><span>${e.pct ? Math.round(pct) + '%' : esc(fmt(val) + ' / ' + fmt(max))}</span>`;
+      if (opts && opts.noText) lab.innerHTML = ''; else lab.innerHTML = `<span>${esc(tokens(e.lab || ''))}</span><span>${e.pct ? Math.round(pct) + '%' : esc(fmt(val) + ' / ' + fmt(max))}</span>`;
       n.appendChild(fill); n.appendChild(lab); return n;
     }
   };
@@ -260,9 +261,10 @@
     const nodes = {};
     cfg.els.forEach(e => {
       if (e.hide && !opts.editor) return;
+      if (opts.noText && /^(text|clock|countdown|ticker)$/.test(e.type)) return;
       const b = BUILDERS[e.type]; if (!b) return;
       const inner = b(e, th, opts);
-      const wrap = document.createElement('div'); wrap.className = 'ok-el' + (e.an && e.an !== 'none' ? ' ok-an-' + e.an : '');
+      const wrap = document.createElement('div'); wrap.className = 'ok-el' + (!opts.still && e.an && e.an !== 'none' ? ' ok-an-' + e.an : '');
       wrap.dataset.id = e.id;
       wrap.style.cssText = `left:${num(e.x, 0)}px;top:${num(e.y, 0)}px;width:${num(e.w, 200)}px;height:${num(e.h, 100)}px;` +
         (e.rot ? `transform:rotate(${num(e.rot, 0)}deg);` : '') + (num(e.op, 100) < 100 ? `opacity:${num(e.op, 100) / 100};` : '') +
@@ -310,5 +312,93 @@
     });
   }
 
-  g.OverlayKit = { FONTS, DEFAULT_THEME, normalize, render, b64enc, b64dec, color, rgba, esc, num, clamp, tokens };
+  /* ---------- exportar como imagem / ZIP ---------- */
+  function stop(root) { (timers.get(root) || []).forEach(clearInterval); timers.delete(root); }
+  const blobToDataUrl = b => new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = ko; r.readAsDataURL(b); });
+  async function urlToData(u) { const r = await fetch(u, { mode: 'cors', referrerPolicy: 'no-referrer' }); if (!r.ok) throw new Error('http ' + r.status); return blobToDataUrl(await r.blob()); }
+  const fontCache = {};
+  async function fontCss(keys) {
+    let out = '';
+    for (const k of keys) {
+      const f = FONTS[k]; if (!f || !f.gf) continue;
+      if (fontCache[k] == null) {
+        fontCache[k] = '';
+        try {
+          const css = await (await fetch('https://fonts.googleapis.com/css2?family=' + f.gf + '&display=swap')).text();
+          let res = '';
+          for (const part of css.split(/\/\*\s*/).slice(1)) {
+            const i = part.indexOf('*/'), nome = part.slice(0, i).trim(), body = part.slice(i + 2);
+            if (nome !== 'latin' && nome !== 'latin-ext') continue;
+            const m = body.match(/url\((https:[^)]+)\)/); if (!m) continue;
+            res += body.replace(m[0], 'url(' + await urlToData(m[1]) + ')');
+          }
+          fontCache[k] = res;
+        } catch (e) { fontCache[k] = ''; }
+      }
+      out += fontCache[k];
+    }
+    return out;
+  }
+
+  /* Gera uma imagem do overlay. o: { scale, format:'png'|'jpg', bg:'#rrggbb'|null (transparente), noText, theme }
+     Retorna Blob. Chat/widgets (iframes) nao entram na imagem. */
+  async function toImage(cfgIn, o) {
+    o = Object.assign({ scale: 1, format: 'png', bg: null, noText: false }, o || {});
+    const c0 = JSON.parse(JSON.stringify(cfgIn)); if (o.theme) c0.theme = Object.assign({}, c0.theme, o.theme);
+    const host = document.createElement('div'); host.style.cssText = 'position:fixed;left:-100000px;top:0;pointer-events:none';
+    const root = document.createElement('div'); host.appendChild(root); document.body.appendChild(host);
+    try {
+      const { cfg } = render(c0, root, { noEmbed: true, noText: o.noText, still: true });
+      stop(root);
+      const w = cfg.canvas.w, h = cfg.canvas.h;
+      // imagens externas viram data: URL (senao a tela fica "suja" e nao exporta)
+      for (const im of root.querySelectorAll('img')) {
+        try { if (/^https?:/i.test(im.getAttribute('src') || '')) im.src = await urlToData(im.getAttribute('src')); } catch (e) { im.remove(); }
+      }
+      for (const el of root.querySelectorAll('[style*="url("]')) {
+        const m = el.style.backgroundImage.match(/url\(["']?(https?:[^"')]+)["']?\)/);
+        if (m) { try { el.style.backgroundImage = 'url("' + await urlToData(m[1]) + '")'; } catch (e) { el.style.backgroundImage = 'none'; } }
+      }
+      const fams = new Set([cfg.theme.font]); cfg.els.forEach(e => e.fam && fams.add(e.fam));
+      const fonts = await fontCss([...fams]);
+      const xml = new XMLSerializer().serializeToString(root);
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><foreignObject x="0" y="0" width="${w}" height="${h}">` +
+        `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${w}px;height:${h}px"><style>${CSS}\n.ok-root *{animation:none!important}\n${fonts}</style>${xml}</div></foreignObject></svg>`;
+      const img = new Image();
+      await new Promise((ok, ko) => { img.onload = ok; img.onerror = () => ko(new Error('nao consegui desenhar a imagem')); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+      try { await img.decode(); } catch (e) {}
+      const cv = document.createElement('canvas'); const s = clamp(num(o.scale, 1), 0.1, 4);
+      cv.width = Math.round(w * s); cv.height = Math.round(h * s);
+      const x = cv.getContext('2d');
+      if (o.format === 'jpg' || o.bg) { x.fillStyle = o.bg || '#000000'; x.fillRect(0, 0, cv.width, cv.height); }
+      x.drawImage(img, 0, 0, cv.width, cv.height);
+      const blob = await new Promise(r => { try { cv.toBlob(r, o.format === 'jpg' ? 'image/jpeg' : 'image/png', 0.95); } catch (e) { r(null); } });
+      if (!blob) throw new Error('o navegador bloqueou a exportacao (imagem externa sem permissao)');
+      return blob;
+    } finally { stop(root); host.remove(); }
+  }
+
+  /* ZIP simples (sem compressao). files: [{name, blob}] -> Blob */
+  const CRC = (() => { const t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  const crc32 = u8 => { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  async function zip(files) {
+    const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+    const now = new Date(), dt = ((now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1)), dd = (((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate());
+    for (const f of files) {
+      const data = new Uint8Array(await f.blob.arrayBuffer()), name = enc.encode(f.name), crc = crc32(data);
+      const lh = new DataView(new ArrayBuffer(30)); lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+      lh.setUint16(10, dt, true); lh.setUint16(12, dd, true); lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true); lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+      parts.push(lh.buffer, name, data);
+      const ch = new DataView(new ArrayBuffer(46)); ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+      ch.setUint16(12, dt, true); ch.setUint16(14, dd, true); ch.setUint32(16, crc, true); ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true); ch.setUint16(28, name.length, true); ch.setUint32(42, off, true);
+      central.push(ch.buffer, name); off += 30 + name.length + data.length;
+    }
+    const csize = central.reduce((a, b) => a + (b.byteLength !== undefined ? b.byteLength : b.length), 0);
+    const end = new DataView(new ArrayBuffer(22)); end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true); end.setUint32(12, csize, true); end.setUint32(16, off, true);
+    return new Blob([...parts, ...central, end.buffer], { type: 'application/zip' });
+  }
+  function baixar(blob, nome) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
+  const slug = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+  g.OverlayKit = { FONTS, DEFAULT_THEME, normalize, render, stop, toImage, zip, baixar, slug, b64enc, b64dec, color, rgba, esc, num, clamp, tokens };
 })(window);

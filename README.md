@@ -38,6 +38,9 @@ Monte o **overlay da sua live** sem programar: quadros, textos, relógio, barra 
    - use **Largura × Altura** iguais ao tamanho da tela mostrado no editor (ex.: 1920 × 1080);
    - deixe o fundo transparente, que já é o padrão do overlay.
 
+**Baixar como imagem:** o botão **🖼 Baixar imagem** salva o que você montou em **PNG** (fundo transparente ou colorido) ou **JPG**, em 50%, 100% ou 200%, com opção de remover os textos. O chat/widgets (conteúdo de outros sites) não entra na imagem.
+**Modelos prontos sem texto:** o botão **⬇ Modelos prontos** baixa os modelos padrão só com quadros e formas, sem nenhum texto (um arquivo, ou vários juntos num `.zip`), com a opção de usar as cores do seu tema e de incluir o `.json` de cada um.
+
 Para guardar um layout, use **Baixar JSON** e, depois, **Importar** (aceita o arquivo ou um link). Para enviar a um amigo, basta mandar o **link**: ele já leva toda a configuração.
 
 ## Elementos disponíveis
@@ -101,6 +104,6 @@ Para criar seu próprio modelo, adicione um objeto em `presets.js` (use **Copiar
 2. Pick a template and theme, drag/resize elements, tweak colors, borders, glow, opacity, animations, fonts and canvas size (16:9, 9:16, 1:1 or custom).
 3. Click **Copy link** and use it as the URL of an OBS Browser source, with width × height equal to the canvas size shown in the editor.
 
-Use **Download JSON / Import** to save layouts, or just share the link: it contains the whole configuration. `preview=1` in the link adds a checkerboard background for testing in a browser. The editor UI has a Portuguese/English switch.
+Use **🖼 Download image** (PNG/JPG, transparent or solid background) and **⬇ Ready-made templates** (stock templates with no text, as a .zip) to export images. Use **Download JSON / Import** to save layouts, or just share the link: it contains the whole configuration. `preview=1` in the link adds a checkerboard background for testing in a browser. The editor UI has a Portuguese/English switch.
 
 Licensed under MIT.
